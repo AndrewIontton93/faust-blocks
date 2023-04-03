@@ -1,6 +1,10 @@
+import { WordPressBlocksViewer } from '@faustwp/blocks';
 import { gql } from '@apollo/client';
 import * as MENUS from '../constants/menus';
 import { BlogInfoFragment } from '../fragments/GeneralSettings';
+import flatListToHierarchical from '../utilities/flatListToHierarchical';
+import blockFragments from '../utilities/blockFragments';
+import wpBlocks from '../wp-blocks';
 import {
   Header,
   Footer,
@@ -25,6 +29,9 @@ export default function Component(props) {
   const footerMenu = props?.data?.footerMenuItems?.nodes ?? [];
   const { title, content, featuredImage } = props?.data?.page ?? { title: '' };
 
+  const { editorBlocks } = props?.data?.page;
+  const blocks = flatListToHierarchical(editorBlocks);
+
   return (
     <>
       <SEO
@@ -42,6 +49,7 @@ export default function Component(props) {
           <EntryHeader title={title} image={featuredImage?.node} />
           <Container>
             <ContentWrapper content={content} />
+            <WordPressBlocksViewer blocks={blocks} />
           </Container>
         </>
       </Main>
@@ -63,6 +71,7 @@ Component.query = gql`
   ${BlogInfoFragment}
   ${NavigationMenu.fragments.entry}
   ${FeaturedImage.fragments.entry}
+  ${blockFragments(wpBlocks).entries}
   query GetPageData(
     $databaseId: ID!
     $headerLocation: MenuLocationEnum
@@ -73,6 +82,14 @@ Component.query = gql`
       title
       content
       ...FeaturedImageFragment
+      editorBlocks {
+        name
+        __typename
+        renderedHtml
+        id: clientId
+        parentId: parentClientId
+        ${blockFragments(wpBlocks).keys}
+      }
     }
     generalSettings {
       ...BlogInfoFragment
